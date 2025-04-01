@@ -1,1 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nass Voting Site</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://js.paystack.co/v1/inline.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
 
+        body {
+            background: linear-gradient(135deg, #ff6b6b, #4ecdc4);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            padding: 2rem;
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            margin-bottom: 2rem;
+        }
+
+        .candidates {
+            display: flex;
+            gap: 2rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .candidate-card {
+            background: white;
+            padding: 1rem;
+            border-radius: 15px;
+            width: 250px;
+            text-align: center;
+            transition: transform 0.3s;
+            cursor: pointer;
+            min-height: 350px;
+        }
+
+        .candidate-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .candidate-image {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin: 0 auto 1rem;
+        }
+
+        .payment-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .payment-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .admin-dashboard {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            margin-top: 2rem;
+            display: none;
+        }
+
+        button {
+            background: #4ecdc4;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+
+        .results-list {
+            margin-top: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Nass Voting Site</h1>
+        <button onclick="toggleAdmin()">Admin Dashboard</button>
+    </div>
+
+    <div class="candidates" id="candidatesSection">
+        <!-- Candidate cards will be added here dynamically -->
+    </div>
+
+    <div id="paymentModal" class="payment-modal">
+        <div class="payment-content">
+            <h3>Pay ₦200 to Vote</h3>
+            <button onclick="initializePayment()">Pay with Paystack</button>
+        </div>
+    </div>
+
+    <div class="admin-dashboard" id="adminDashboard">
+        <h2>Admin Dashboard</h2>
+        <canvas id="resultsChart"></canvas>
+        <div class="results-list" id="resultsList"></div>
+    </div>
+
+    <script>
+        // Initialize candidates with images
+        let candidates = [
+            { name: "Ada Obi", imageUrl: "https://placehold.co/200x200/FF6B6B/white?text=Ada", votes: 0 },
+            { name: "Chike Nwankwo", imageUrl: "https://placehold.co/200x200/4ECDC4/white?text=Chike", votes: 0 },
+            { name: "Zainab Musa", imageUrl: "https://placehold.co/200x200/FFD700/white?text=Zainab", votes: 0 },
+            { name: "Emeka Okoro", imageUrl: "https://placehold.co/200x200/32CD32/white?text=Emeka", votes: 0 },
+            { name: "Amina Bello", imageUrl: "https://placehold.co/200x200/9370DB/white?text=Amina", votes: 0 },
+            { name: "Tunde Adeleke", imageUrl: "https://placehold.co/200x200/FF4500/white?text=Tunde", votes: 0 },
+            { name: "Chioma Eze", imageUrl: "https://placehold.co/200x200/00BFFF/white?text=Chioma", votes: 0 }
+        ];
+
+        // Load from localStorage
+        if(localStorage.getItem('votes')) {
+            candidates = JSON.parse(localStorage.getItem('votes'));
+        }
+
+        // Render candidates without vote counts
+        function renderCandidates() {
+            const container = document.getElementById('candidatesSection');
+            container.innerHTML = candidates.map(candidate => `
+                <div class="candidate-card" onclick="openPayment('${candidate.name}')">
+                    <img src="${candidate.imageUrl}" class="candidate-image" alt="${candidate.name}">
+                    <h3>${candidate.name}</h3>
+                </div>
+            `).join('');
+        }
+
+        // Payment handling
+        let selectedCandidate = null;
+
+        function openPayment(candidateName) {
+            selectedCandidate = candidateName;
+            document.getElementById('paymentModal').style.display = 'flex';
+        }
+
+        function initializePayment() {
+            const handler = PaystackPop.setup({
+                key: 'pk_live_a7681776ae157a00df70c90c1ff633837976abf0',
+                email: 'user@example.com',
+                amount: 10000,
+                currency: 'NGN',
+                callback: function(response) {
+                    candidates.find(c => c.name === selectedCandidate).votes++;
+                    localStorage.setItem('votes', JSON.stringify(candidates));
+                    alert('Payment successful! Vote counted.');
+                    renderCandidates();
+                    document.getElementById('paymentModal').style.display = 'none';
+                },
+                onClose: function() {
+                    alert('Payment cancelled');
+                }
+            });
+            handler.openIframe();
+        }
+
+        // Admin dashboard
+        function toggleAdmin() {
+            const password = prompt('Enter admin password:');
+            if(password === 'admin123') {
+                document.getElementById('adminDashboard').style.display = 'block';
+                showResults();
+            }
+        }
+
+        function showResults() {
+            // Sort candidates by votes
+            const sortedCandidates = [...candidates].sort((a, b) => b.votes - a.votes);
+            
+            // Update results list
+            const resultsList = document.getElementById('resultsList');
+            resultsList.innerHTML = sortedCandidates.map(candidate => `
+                <p>${candidate.name}: ${candidate.votes} votes</p>
+            `).join('');
+
+            // Chart configuration
+            const ctx = document.getElementById('resultsChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: sortedCandidates.map(c => c.name),
+                    datasets: [{
+                        label: 'Votes',
+                        data: sortedCandidates.map(c => c.votes),
+                        backgroundColor: [
+                            '#FF6B6B', '#4ECDC4', '#FFD700',
+                            '#32CD32', '#9370DB', '#FF4500', '#00BFFF'
+                        ]
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initial render
+        renderCandidates();
+    </script>
+</body>
+  </html>
